@@ -4,7 +4,11 @@ import jsdocJson from '../../../../../doc.json';
 import { Textbox } from '@src/repl/components/panel/SettingsTab';
 import { settingsMap, useSettings } from '@src/settings.mjs';
 
-const isValid = ({ name, description }) => name && !name.startsWith('_') && !!description;
+const isValid = ({ name, description, tags = [] }) => {
+  const isSupradoughOnly = tags.includes('supradough') && !tags.includes('superdough');
+  const isSuperdirtOnly = tags.includes('superdirt') && !tags.includes('superdough');
+  return name && !name.startsWith('_') && !!description && !isSupradoughOnly && !isSuperdirtOnly;
+};
 
 const availableFunctions = (() => {
   const seen = new Set(); // avoid repetition
@@ -14,7 +18,7 @@ const availableFunctions = (() => {
     if (seen.has(doc.name)) continue;
 
     // jsdoc also uses "tags" for when you use @something in the comments and it doesn't know what
-    // @something is. We only want data from comments like `@tags fx, superdough` here.
+    // @something is. We only want data from comments like `@tags superdough` here.
     // If nothing is specified, we default to "untagged" for debugging
     doc.tags = doc.tags?.filter((t) => t && typeof t === 'string') || ['untagged'];
     functions.push(doc);
@@ -39,11 +43,12 @@ const availableFunctions = (() => {
 })();
 
 const tagCounts = {};
+const ignoredTags = ['supradough', 'superdirt'];
 // const tagOptions = { all: `all (${availableFunctions.length})` };
 const tagOptions = { all: `all` };
 for (const doc of availableFunctions) {
   (doc.tags || ['untagged']).forEach((t) => {
-    if (typeof t === 'string' && t) {
+    if (typeof t === 'string' && t && !ignoredTags.includes(t)) {
       tagCounts[t] = (tagCounts[t] || 0) + 1;
       //tagOptions[t] = `${t} (${tagCounts[t]})`;
       tagOptions[t] = t;
@@ -204,7 +209,7 @@ export const Reference = memo(function Reference() {
                 </h3>
                 {entry.tags && (
                   <span className="ml-2 text-xs text-foreground border border-muted px-1 py-0.5">
-                    {entry.tags.join(', ')}
+                    {entry.tags.filter((t) => !ignoredTags.includes(t)).join(', ')}
                   </span>
                 )}
               </div>
